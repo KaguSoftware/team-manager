@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { z } from "zod";
+import { KaguLogo } from "@/components/KaguLogo";
 import { SocialAuth } from "@/components/SocialAuth";
 import { Button, Field, Screen, Subtle, Title } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
@@ -36,6 +37,9 @@ export default function SignIn() {
           contentContainerClassName="flex-grow justify-center px-6 py-12"
           keyboardShouldPersistTaps="handled"
         >
+          <View className="mb-6 items-center">
+            <KaguLogo size={72} />
+          </View>
           <View className="mb-8">
             <Title>Welcome back</Title>
             <Subtle>Sign in to your team workspace</Subtle>
@@ -77,7 +81,7 @@ export default function SignIn() {
 
           <View className="mt-6 flex-row justify-center gap-1">
             <Text className="text-gray-500 dark:text-gray-400">New here?</Text>
-            <Link href="/(auth)/sign-up" className="font-semibold text-brand-600">
+            <Link href="/(auth)/sign-up" className="font-semibold text-ink-950 underline dark:text-ink-50">
               Create an account
             </Link>
           </View>

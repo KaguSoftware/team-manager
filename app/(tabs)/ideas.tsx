@@ -10,27 +10,33 @@ import {
   Platform,
   Pressable,
   Text,
+  useColorScheme,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { SkeletonList } from "@/components/Skeleton";
+import { toast } from "@/components/Toast";
 import {
   Badge,
   Button,
   Card,
   EmptyState,
   Field,
-  Loading,
   Screen,
   Subtle,
   Title,
 } from "@/components/ui";
 import { statusTone, useIdeaMutations, useIdeas, useMyRole } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
+import { accentFg } from "@/lib/theme";
 import { ideaSchema } from "@/lib/validation";
 import { useUserId } from "@/providers/AuthProvider";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 export default function Ideas() {
+  const scheme = useColorScheme();
   const workspaceId = useWorkspaceStore((s) => s.workspaceId);
   const userId = useUserId();
   const qc = useQueryClient();
@@ -70,9 +76,24 @@ export default function Ideas() {
     setPitch("");
     setCreating(false);
     qc.invalidateQueries({ queryKey: ["ideas", workspaceId] });
+    toast.success("Idea posted");
   };
 
-  if (isLoading) return <Loading />;
+  if (isLoading) {
+    return (
+      <Screen>
+        <SafeAreaView className="flex-1" edges={["top"]}>
+          <View className="px-4 pt-2">
+            <Title>Ideas</Title>
+            <Subtle>Pitch what we should build next</Subtle>
+            <View className="mt-4">
+              <SkeletonList count={5} />
+            </View>
+          </View>
+        </SafeAreaView>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -90,13 +111,13 @@ export default function Ideas() {
                 <Subtle>Pitch what we should build next</Subtle>
               </View>
               {canPost ? (
-                <Pressable
+                <AnimatedPressable
                   accessibilityLabel="New idea"
                   onPress={() => setCreating(true)}
-                  className="rounded-full bg-brand-600 p-2"
+                  className="rounded-full bg-ink-950 active:bg-ink-800 dark:bg-ink-100 dark:active:bg-ink-300 p-2"
                 >
-                  <Ionicons name="add" size={22} color="#fff" />
-                </Pressable>
+                  <Ionicons name="add" size={22} color={accentFg(scheme)} />
+                </AnimatedPressable>
               ) : null}
             </View>
           }
@@ -107,36 +128,39 @@ export default function Ideas() {
               subtitle="Be the first to pitch something"
             />
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const voted = item.idea_votes.some((v: { user_id: string }) => v.user_id === userId);
             return (
+              <Animated.View entering={FadeInDown.delay(index * 50).springify().damping(18)}>
               <Link href={{ pathname: "/idea/[id]", params: { id: item.id } }} asChild>
                 <Pressable>
                   <Card className="mb-2 flex-row items-center gap-3">
-                    <Pressable
+                    <AnimatedPressable
                       accessibilityLabel={voted ? "Remove vote" : "Vote"}
                       onPress={() =>
                         vote
                           .mutateAsync({ ideaId: item.id, userId: userId!, voted })
-                          .catch((e) => Alert.alert("Vote failed", e.message))
+                          .catch((e) => toast.error(e.message))
                       }
                       className={`items-center rounded-xl px-3 py-2 ${
-                        voted ? "bg-brand-600" : "bg-gray-100 dark:bg-gray-800"
+                        voted
+                          ? "bg-ink-950 active:bg-ink-800 dark:bg-ink-100 dark:active:bg-ink-300"
+                          : "bg-gray-100 dark:bg-gray-800"
                       }`}
                     >
                       <Ionicons
                         name="chevron-up"
                         size={18}
-                        color={voted ? "#fff" : "#6b7280"}
+                        color={voted ? accentFg(scheme) : "#6b7280"}
                       />
                       <Text
                         className={`text-sm font-bold ${
-                          voted ? "text-white" : "text-gray-700 dark:text-gray-200"
+                          voted ? "text-white dark:text-ink-950" : "text-gray-700 dark:text-gray-200"
                         }`}
                       >
                         {item.idea_votes.length}
                       </Text>
-                    </Pressable>
+                    </AnimatedPressable>
                     <View className="flex-1">
                       <Text
                         className="font-semibold text-gray-900 dark:text-gray-100"
@@ -155,6 +179,7 @@ export default function Ideas() {
                   </Card>
                 </Pressable>
               </Link>
+              </Animated.View>
             );
           }}
         />

@@ -14,6 +14,20 @@ function throwIfError<T>(res: { data: T; error: { message: string } | null }): T
 }
 
 // ---------------------------------------------------------------------------
+// Profiles
+// ---------------------------------------------------------------------------
+export function useProfile(userId: string | null) {
+  return useQuery({
+    queryKey: ["profile", userId],
+    enabled: !!userId,
+    queryFn: async () =>
+      throwIfError(
+        await supabase.from("profiles").select("*").eq("id", userId!).single(),
+      ),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Workspaces & membership
 // ---------------------------------------------------------------------------
 export function useMyWorkspaces() {
@@ -206,6 +220,24 @@ export function useMyTasks(workspaceId: string | null, userId: string | null) {
   });
 }
 
+// Every task in the workspace — the single client-side source for the
+// dashboard/insights aggregations in lib/insights.ts (no SQL needed).
+export function useWorkspaceTasks(workspaceId: string | null) {
+  return useQuery({
+    queryKey: ["workspace-tasks", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async () =>
+      throwIfError(
+        await supabase
+          .from("tasks")
+          .select(
+            "id, title, status, priority, assignee_id, project_id, start_date, due_date, created_at, updated_at",
+          )
+          .eq("workspace_id", workspaceId!),
+      ),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Ideas
 // ---------------------------------------------------------------------------
@@ -223,6 +255,15 @@ export function useIdeas(workspaceId: string | null) {
       ),
   });
 }
+
+// Minimal structural shapes for optimistic cache patches — the real cache
+// entries carry more fields, which the spreads preserve.
+type IdeaWithVotes = { id: string; idea_votes: { user_id: string }[] };
+type MeetingWithAttendees = {
+  id: string;
+  meeting_attendees: { user_id: string; rsvp: RsvpStatus }[];
+};
+type NotificationRow = { id: string; read_at: string | null };
 
 export function useIdeaMutations(workspaceId: string | null) {
   const qc = useQueryClient();
@@ -246,7 +287,36 @@ export function useIdeaMutations(workspaceId: string | null) {
         );
       }
     },
-    onSuccess: invalidate,
+    // Optimistic: flip the vote in both the list and the detail caches.
+    onMutate: async (args) => {
+      await qc.cancelQueries({ queryKey: ["ideas", workspaceId] });
+      await qc.cancelQueries({ queryKey: ["idea", args.ideaId] });
+      const prevList = qc.getQueryData(["ideas", workspaceId]);
+      const prevDetail = qc.getQueryData(["idea", args.ideaId]);
+      const patch = <T extends IdeaWithVotes>(idea: T): T =>
+        idea.id !== args.ideaId
+          ? idea
+          : {
+              ...idea,
+              idea_votes: args.voted
+                ? idea.idea_votes.filter((v) => v.user_id !== args.userId)
+                : [...idea.idea_votes, { user_id: args.userId }],
+            };
+      qc.setQueryData<IdeaWithVotes[]>(["ideas", workspaceId], (old) => old?.map(patch));
+      qc.setQueryData<IdeaWithVotes>(["idea", args.ideaId], (old) =>
+        old ? patch(old) : old,
+      );
+      return { prevList, prevDetail };
+    },
+    onError: (_e, args, ctx) => {
+      if (!ctx) return;
+      qc.setQueryData(["ideas", workspaceId], ctx.prevList);
+      qc.setQueryData(["idea", args.ideaId], ctx.prevDetail);
+    },
+    onSettled: (_d, _e, args) => {
+      invalidate();
+      qc.invalidateQueries({ queryKey: ["idea", args.ideaId] });
+    },
   });
 
   const setStatus = useMutation({
@@ -289,7 +359,38 @@ export function useRsvp(workspaceId: string | null) {
           .eq("meeting_id", args.meetingId)
           .eq("user_id", args.userId),
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["meetings", workspaceId] }),
+    // Optimistic: set the RSVP in both the list and the detail caches.
+    onMutate: async (args) => {
+      await qc.cancelQueries({ queryKey: ["meetings", workspaceId] });
+      await qc.cancelQueries({ queryKey: ["meeting", args.meetingId] });
+      const prevList = qc.getQueryData(["meetings", workspaceId]);
+      const prevDetail = qc.getQueryData(["meeting", args.meetingId]);
+      const patch = <T extends MeetingWithAttendees>(m: T): T =>
+        m.id !== args.meetingId
+          ? m
+          : {
+              ...m,
+              meeting_attendees: m.meeting_attendees.map((a) =>
+                a.user_id === args.userId ? { ...a, rsvp: args.rsvp } : a,
+              ),
+            };
+      qc.setQueryData<MeetingWithAttendees[]>(["meetings", workspaceId], (old) =>
+        old?.map(patch),
+      );
+      qc.setQueryData<MeetingWithAttendees>(["meeting", args.meetingId], (old) =>
+        old ? patch(old) : old,
+      );
+      return { prevList, prevDetail };
+    },
+    onError: (_e, args, ctx) => {
+      if (!ctx) return;
+      qc.setQueryData(["meetings", workspaceId], ctx.prevList);
+      qc.setQueryData(["meeting", args.meetingId], ctx.prevDetail);
+    },
+    onSettled: (_d, _e, args) => {
+      qc.invalidateQueries({ queryKey: ["meetings", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["meeting", args.meetingId] });
+    },
   });
 }
 
@@ -314,6 +415,13 @@ export function useNotificationMutations() {
   const qc = useQueryClient();
   const invalidate = () => qc.invalidateQueries({ queryKey: ["notifications"] });
 
+  const setRead = (old: NotificationRow[] | undefined, id?: string) =>
+    old?.map((n) =>
+      (id === undefined ? n.read_at === null : n.id === id)
+        ? { ...n, read_at: new Date().toISOString() }
+        : n,
+    );
+
   const markRead = useMutation({
     mutationFn: async (id: string) =>
       throwIfError(
@@ -322,7 +430,16 @@ export function useNotificationMutations() {
           .update({ read_at: new Date().toISOString() })
           .eq("id", id),
       ),
-    onSuccess: invalidate,
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["notifications"] });
+      const prev = qc.getQueryData(["notifications"]);
+      qc.setQueryData<NotificationRow[]>(["notifications"], (old) => setRead(old, id));
+      return { prev };
+    },
+    onError: (_e, _id, ctx) => {
+      if (ctx) qc.setQueryData(["notifications"], ctx.prev);
+    },
+    onSettled: invalidate,
   });
 
   const markAllRead = useMutation({
@@ -333,7 +450,16 @@ export function useNotificationMutations() {
           .update({ read_at: new Date().toISOString() })
           .is("read_at", null),
       ),
-    onSuccess: invalidate,
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["notifications"] });
+      const prev = qc.getQueryData(["notifications"]);
+      qc.setQueryData<NotificationRow[]>(["notifications"], (old) => setRead(old));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx) qc.setQueryData(["notifications"], ctx.prev);
+    },
+    onSettled: invalidate,
   });
 
   return { markRead, markAllRead };

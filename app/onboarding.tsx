@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { KaguLogo } from "@/components/KaguLogo";
 import { Button, Card, Field, Screen, Subtle, Title } from "@/components/ui";
 import { useMyWorkspaces, useWorkspaceMutations } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
@@ -62,6 +63,9 @@ export default function Onboarding() {
           contentContainerClassName="flex-grow justify-center px-6 py-12"
           keyboardShouldPersistTaps="handled"
         >
+          <View className="mb-6 items-center">
+            <KaguLogo size={56} />
+          </View>
           <Title>Set up your team</Title>
           <Subtle className="mb-6">Create a workspace or join one with an invite code</Subtle>
 

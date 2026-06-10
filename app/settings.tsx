@@ -1,12 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { toast } from "@/components/Toast";
 import { Button, Card, Field, Screen, Subtle } from "@/components/ui";
 import { clearPushToken, registerForPushNotifications } from "@/lib/push";
-import { useMyWorkspaces, useWorkspaceMutations } from "@/lib/queries";
+import { useMembers, useMyWorkspaces, useProfile, useWorkspaceMutations } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { useUserId } from "@/providers/AuthProvider";
 import { useWorkspaceStore } from "@/stores/workspace";
@@ -17,26 +18,15 @@ export default function Settings() {
   const { workspaceId, setWorkspaceId } = useWorkspaceStore();
   const { data: workspaces } = useMyWorkspaces();
   const { leaveWorkspace } = useWorkspaceMutations(workspaceId);
+  const profileQ = useProfile(userId);
+  const currentWorkspace = (workspaces ?? []).find((ws) => ws.id === workspaceId);
+  const { data: members } = useMembers(workspaceId);
   const [name, setName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [mfaEnrolled, setMfaEnrolled] = useState<boolean | null>(null);
   const [totpUri, setTotpUri] = useState<string | null>(null);
   const [totpFactorId, setTotpFactorId] = useState<string | null>(null);
   const [totpCode, setTotpCode] = useState("");
-
-  const profileQ = useQuery({
-    queryKey: ["profile", userId],
-    enabled: !!userId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId!)
-        .single();
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
 
   useEffect(() => {
     if (profileQ.data) setName(profileQ.data.full_name);
@@ -61,6 +51,7 @@ export default function Settings() {
     }
     qc.invalidateQueries({ queryKey: ["profile", userId] });
     qc.invalidateQueries({ queryKey: ["members"] });
+    toast.success("Profile updated");
   };
 
   const startMfa = async () => {
@@ -218,6 +209,12 @@ export default function Settings() {
 
           <Card className="mb-3">
             <Text className="mb-2 font-semibold text-gray-900 dark:text-gray-100">Workspace</Text>
+            {currentWorkspace ? (
+              <Subtle className="mb-3">
+                {currentWorkspace.name} · {members?.length ?? 0}{" "}
+                {members?.length === 1 ? "member" : "members"}
+              </Subtle>
+            ) : null}
             {(workspaces ?? []).map((ws) => (
               <Button
                 key={ws.id}

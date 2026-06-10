@@ -45,7 +45,7 @@ function PickerSheet({
               <Text className="text-base text-gray-500">Cancel</Text>
             </Pressable>
             <Pressable onPress={() => onDone(value)} hitSlop={8}>
-              <Text className="text-base font-semibold text-brand-600">Done</Text>
+              <Text className="text-base font-semibold text-ink-950 dark:text-ink-50">Done</Text>
             </Pressable>
           </View>
           <DateTimePicker

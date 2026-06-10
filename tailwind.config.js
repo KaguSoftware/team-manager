@@ -5,18 +5,20 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: "#eef4ff",
-          100: "#dbe6fe",
-          200: "#bfd3fe",
-          300: "#93b4fd",
-          400: "#608dfa",
-          500: "#3b66f6",
-          600: "#2547eb",
-          700: "#1d35d8",
-          800: "#1e2daf",
-          900: "#1e2b8a",
-          950: "#171d54"
+        // Monochrome "ink" scale — the Kagu brand is black/white/gray like the
+        // origami-bird logo. Keep in sync with lib/theme.ts.
+        ink: {
+          50: "#fafafa",
+          100: "#f4f4f5",
+          200: "#e4e4e7",
+          300: "#d4d4d8",
+          400: "#a1a1aa",
+          500: "#71717a",
+          600: "#52525b",
+          700: "#3f3f46",
+          800: "#27272a",
+          900: "#18181b",
+          950: "#0b0b0d"
         },
         surface: {
           light: "#ffffff",

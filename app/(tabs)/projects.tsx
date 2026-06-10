@@ -10,31 +10,37 @@ import {
   Platform,
   Pressable,
   Text,
+  useColorScheme,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { SkeletonList } from "@/components/Skeleton";
+import { toast } from "@/components/Toast";
 import {
   Badge,
   Button,
   Card,
   EmptyState,
   Field,
-  Loading,
   Screen,
   Subtle,
   Title,
 } from "@/components/ui";
 import { statusTone, useMyRole, useProjects } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
+import { accentFg } from "@/lib/theme";
 import { useUserId } from "@/providers/AuthProvider";
 import { useWorkspaceStore } from "@/stores/workspace";
 
-const palette = ["#3b66f6", "#16a34a", "#d97706", "#dc2626", "#9333ea", "#0d9488"];
+const palette = ["#64748b", "#16a34a", "#d97706", "#dc2626", "#9333ea", "#0d9488"];
 
 export default function Projects() {
   const workspaceId = useWorkspaceStore((s) => s.workspaceId);
   const userId = useUserId();
   const qc = useQueryClient();
+  const scheme = useColorScheme();
   const { data: role } = useMyRole(workspaceId);
   const { data: projects, isLoading, refetch, isRefetching } = useProjects(workspaceId);
   const isAdmin = role === "owner" || role === "admin";
@@ -64,9 +70,20 @@ export default function Projects() {
     setName("");
     setCreating(false);
     qc.invalidateQueries({ queryKey: ["projects", workspaceId] });
+    toast.success("Project created");
   };
 
-  if (isLoading) return <Loading />;
+  if (isLoading)
+    return (
+      <Screen>
+        <SafeAreaView className="flex-1 px-4" edges={["top"]}>
+          <View className="mb-4 mt-2">
+            <Title>Projects</Title>
+          </View>
+          <SkeletonList />
+        </SafeAreaView>
+      </Screen>
+    );
 
   return (
     <Screen>
@@ -81,13 +98,13 @@ export default function Projects() {
             <View className="mb-4 mt-2 flex-row items-center justify-between">
               <Title>Projects</Title>
               {isAdmin ? (
-                <Pressable
+                <AnimatedPressable
                   accessibilityLabel="New project"
                   onPress={() => setCreating(true)}
-                  className="rounded-full bg-brand-600 p-2"
+                  className="rounded-full bg-ink-950 p-2 active:bg-ink-800 dark:bg-ink-100 dark:active:bg-ink-300"
                 >
-                  <Ionicons name="add" size={22} color="#fff" />
-                </Pressable>
+                  <Ionicons name="add" size={22} color={accentFg(scheme)} />
+                </AnimatedPressable>
               ) : null}
             </View>
           }
@@ -98,7 +115,8 @@ export default function Projects() {
               subtitle={isAdmin ? "Tap + to create the first project" : "Projects will appear here"}
             />
           }
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
+            <Animated.View entering={FadeInDown.delay(Math.min(index * 40, 320))}>
             <Link href={{ pathname: "/project/[id]", params: { id: item.id } }} asChild>
               <Pressable>
                 <Card className="mb-2">
@@ -120,6 +138,7 @@ export default function Projects() {
                 </Card>
               </Pressable>
             </Link>
+            </Animated.View>
           )}
         />
 

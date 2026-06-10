@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { toast } from "@/components/Toast";
 import { Avatar, Badge, Button, Card, Loading, Screen, Subtle } from "@/components/ui";
 import type { RsvpStatus } from "@/lib/database.types";
 import { useMyRole, useRsvp } from "@/lib/queries";
@@ -54,9 +55,8 @@ export default function MeetingDetail() {
   const setRsvp = async (rsvp: RsvpStatus) => {
     try {
       await rsvpMutation.mutateAsync({ meetingId: meeting.id, userId: userId!, rsvp });
-      qc.invalidateQueries({ queryKey: ["meeting", id] });
     } catch (e) {
-      Alert.alert("Could not update RSVP", (e as Error).message);
+      toast.error((e as Error).message);
     }
   };
 

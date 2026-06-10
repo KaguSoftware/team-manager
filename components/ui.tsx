@@ -4,9 +4,12 @@ import {
   Pressable,
   Text,
   TextInput,
+  useColorScheme,
   View,
   type TextInputProps,
 } from "react-native";
+import { tap } from "@/lib/haptics";
+import { accentFg } from "@/lib/theme";
 
 export function Screen({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
@@ -55,29 +58,41 @@ export function Button({
   disabled?: boolean;
   className?: string;
 }) {
+  const scheme = useColorScheme();
   const base = "rounded-xl px-4 py-3 items-center justify-center flex-row";
   const styles = {
-    primary: "bg-brand-600 active:bg-brand-700",
+    primary: "bg-ink-950 active:bg-ink-800 dark:bg-ink-100 dark:active:bg-ink-300",
     secondary: "bg-gray-200 dark:bg-gray-700 active:opacity-80",
     danger: "bg-red-600 active:bg-red-700",
     ghost: "bg-transparent",
   }[variant];
   const textStyles = {
-    primary: "text-white font-semibold",
+    primary: "text-white dark:text-ink-950 font-semibold",
     secondary: "text-gray-900 dark:text-gray-100 font-semibold",
     danger: "text-white font-semibold",
-    ghost: "text-brand-600 font-semibold",
+    ghost: "text-ink-900 dark:text-ink-100 font-semibold",
   }[variant];
 
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={onPress}
+      onPress={() => {
+        tap();
+        onPress();
+      }}
       disabled={disabled || loading}
       className={`${base} ${styles} ${disabled || loading ? "opacity-50" : ""} ${className ?? ""}`}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "secondary" || variant === "ghost" ? undefined : "#fff"} />
+        <ActivityIndicator
+          color={
+            variant === "secondary" || variant === "ghost"
+              ? undefined
+              : variant === "primary"
+                ? accentFg(scheme)
+                : "#fff"
+          }
+        />
       ) : (
         <Text className={textStyles}>{title}</Text>
       )}
@@ -116,13 +131,15 @@ export function Field({
   );
 }
 
+// Keys are legacy tone names kept for consumer stability; values are the
+// muted monochrome-era palette ("blue" renders slate, "purple" renders ink).
 const badgeTones: Record<string, string> = {
   gray: "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200",
-  blue: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200",
+  blue: "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200",
   green: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200",
   amber: "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-200",
   red: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200",
-  purple: "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200",
+  purple: "bg-ink-200 dark:bg-ink-700 text-ink-700 dark:text-ink-200",
 };
 
 export function Badge({ text, tone = "gray" }: { text: string; tone?: keyof typeof badgeTones }) {
@@ -144,11 +161,11 @@ export function Avatar({ name, size = 36 }: { name: string; size?: number }) {
   return (
     <View
       style={{ width: size, height: size, borderRadius: size / 2 }}
-      className="items-center justify-center bg-brand-100 dark:bg-brand-900"
+      className="items-center justify-center bg-ink-200 dark:bg-ink-800"
     >
       <Text
         style={{ fontSize: size * 0.4 }}
-        className="font-semibold text-brand-700 dark:text-brand-200"
+        className="font-semibold text-ink-700 dark:text-ink-200"
       >
         {initials}
       </Text>

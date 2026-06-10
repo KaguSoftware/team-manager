@@ -1,11 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Link, router } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, useColorScheme, View } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { SkeletonList } from "@/components/Skeleton";
 import { Card, EmptyState, Screen, Subtle, Title } from "@/components/ui";
 import { useMeetings, useMyRole } from "@/lib/queries";
+import { accent, accentFg, ICON_MUTED } from "@/lib/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 function dayKey(iso: string) {
@@ -14,8 +17,9 @@ function dayKey(iso: string) {
 }
 
 export default function Meetings() {
+  const scheme = useColorScheme();
   const workspaceId = useWorkspaceStore((s) => s.workspaceId);
-  const { data: meetings } = useMeetings(workspaceId);
+  const { data: meetings, isLoading, refetch, isRefetching } = useMeetings(workspaceId);
   const { data: role } = useMyRole(workspaceId);
   const isAdmin = role === "owner" || role === "admin";
   const [selected, setSelected] = useState(dayKey(new Date().toISOString()));
@@ -23,11 +27,28 @@ export default function Meetings() {
   const marked = useMemo(() => {
     const m: Record<string, { marked?: boolean; dotColor?: string; selected?: boolean; selectedColor?: string }> = {};
     for (const meeting of meetings ?? []) {
-      m[dayKey(meeting.starts_at)] = { marked: true, dotColor: "#2547eb" };
+      m[dayKey(meeting.starts_at)] = { marked: true, dotColor: "#64748b" };
     }
-    m[selected] = { ...(m[selected] ?? {}), selected: true, selectedColor: "#2547eb" };
+    m[selected] = { ...(m[selected] ?? {}), selected: true, selectedColor: accent(scheme) };
     return m;
-  }, [meetings, selected]);
+  }, [meetings, selected, scheme]);
+
+  const calendarTheme = useMemo(
+    () => ({
+      calendarBackground: "transparent",
+      dayTextColor: scheme === "dark" ? "#e4e4e7" : "#18181b",
+      monthTextColor: scheme === "dark" ? "#e4e4e7" : "#18181b",
+      textSectionTitleColor: ICON_MUTED,
+      textDisabledColor: scheme === "dark" ? "#3f3f46" : "#d4d4d8",
+      todayTextColor: accent(scheme),
+      arrowColor: accent(scheme),
+      selectedDayBackgroundColor: accent(scheme),
+      selectedDayTextColor: accentFg(scheme),
+      dotColor: "#64748b",
+      selectedDotColor: accentFg(scheme),
+    }),
+    [scheme],
+  );
 
   const dayMeetings = (meetings ?? []).filter((m) => dayKey(m.starts_at) === selected);
 
@@ -37,24 +58,30 @@ export default function Meetings() {
         <View className="mb-2 mt-2 flex-row items-center justify-between px-4">
           <Title>Meetings</Title>
           {isAdmin ? (
-            <Pressable
+            <AnimatedPressable
               accessibilityLabel="New meeting"
               onPress={() => router.push("/meeting/new")}
-              className="rounded-full bg-brand-600 p-2"
+              className="rounded-full bg-ink-950 active:bg-ink-800 dark:bg-ink-100 dark:active:bg-ink-300 p-2"
             >
-              <Ionicons name="add" size={22} color="#fff" />
-            </Pressable>
+              <Ionicons name="add" size={22} color={accentFg(scheme)} />
+            </AnimatedPressable>
           ) : null}
         </View>
 
         <Calendar
+          key={scheme}
           markedDates={marked}
           onDayPress={(d: { dateString: string }) => setSelected(d.dateString)}
-          theme={{ todayTextColor: "#2547eb", arrowColor: "#2547eb" }}
+          theme={calendarTheme}
         />
 
-        <ScrollView contentContainerClassName="px-4 py-4">
-          {dayMeetings.length === 0 ? (
+        <ScrollView
+          contentContainerClassName="px-4 py-4"
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+        >
+          {isLoading ? (
+            <SkeletonList count={3} />
+          ) : dayMeetings.length === 0 ? (
             <EmptyState
               icon="calendar-outline"
               title="No meetings on this day"

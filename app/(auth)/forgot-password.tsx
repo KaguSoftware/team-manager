@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, View } from "react-native";
 import { z } from "zod";
+import { toast } from "@/components/Toast";
 import { Button, Field, Screen, Subtle, Title } from "@/components/ui";
 import { AUTH_REDIRECT_URL } from "@/lib/authLinks";
 import { supabase } from "@/lib/supabase";
@@ -29,9 +30,8 @@ export default function ForgotPassword() {
       Alert.alert("Could not send reset email", error.message);
       return;
     }
-    Alert.alert("Check your inbox", "We sent a password reset link.", [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+    toast.success("We sent a password reset link. Check your inbox.");
+    router.back();
   });
 
   return (

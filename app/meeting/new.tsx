@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DateTimeField } from "@/components/DateField";
+import { toast } from "@/components/Toast";
 import { Button, Field, Screen } from "@/components/ui";
 import { useMembers } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
@@ -88,6 +89,8 @@ export default function NewMeeting() {
     setBusy(false);
     if (attErr) {
       Alert.alert("Meeting created, but attendees failed", attErr.message);
+    } else {
+      toast.success("Meeting created");
     }
     qc.invalidateQueries({ queryKey: ["meetings", workspaceId] });
     router.back();
@@ -142,12 +145,14 @@ export default function NewMeeting() {
                     key={m.user_id}
                     onPress={() => toggleAttendee(m.user_id)}
                     className={`mb-2 mr-2 rounded-full px-3 py-1.5 ${
-                      active ? "bg-brand-600" : "bg-gray-200 dark:bg-gray-700"
+                      active
+                        ? "bg-ink-950 active:bg-ink-800 dark:bg-ink-100 dark:active:bg-ink-300"
+                        : "bg-gray-200 dark:bg-gray-700"
                     }`}
                   >
                     <Text
                       className={`text-sm font-medium ${
-                        active ? "text-white" : "text-gray-700 dark:text-gray-200"
+                        active ? "text-white dark:text-ink-950" : "text-gray-700 dark:text-gray-200"
                       }`}
                     >
                       {m.profiles?.full_name || "Unnamed"}

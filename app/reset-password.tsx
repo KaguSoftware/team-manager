@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, View } from "react-native";
+import { toast } from "@/components/Toast";
 import { Button, Field, Screen, Subtle, Title } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 import { passwordSchema } from "@/lib/validation";
@@ -29,9 +30,8 @@ export default function ResetPassword() {
       Alert.alert("Could not update password", error.message);
       return;
     }
-    Alert.alert("Password updated", "You are signed in.", [
-      { text: "OK", onPress: () => router.replace("/") },
-    ]);
+    toast.success("Password updated. You are signed in.");
+    router.replace("/");
   };
 
   return (

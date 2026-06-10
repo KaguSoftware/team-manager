@@ -1,14 +1,8 @@
 import { useMemo } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, useColorScheme, View } from "react-native";
 import Svg, { Line, Path, Rect, Text as SvgText } from "react-native-svg";
 import type { Task } from "@/lib/database.types";
-
-const STATUS_COLORS: Record<Task["status"], string> = {
-  todo: "#9ca3af",
-  in_progress: "#3b66f6",
-  review: "#d97706",
-  done: "#16a34a",
-};
+import { DANGER, STATUS_COLORS } from "@/lib/theme";
 
 const ROW_H = 40;
 const BAR_H = 22;
@@ -36,6 +30,9 @@ export function GanttChart({
   onTaskPress?: (task: Task) => void;
 }) {
   const dayW = ZOOM_DAY_W[zoom];
+  const scheme = useColorScheme();
+  const gridStroke = scheme === "dark" ? "#27272a" : "#e5e7eb";
+  const tickFill = scheme === "dark" ? "#a1a1aa" : "#6b7280";
 
   const model = useMemo(() => {
     const scheduled = tasks.filter((t) => t.start_date || t.due_date);
@@ -128,12 +125,12 @@ export function GanttChart({
               y1={HEADER_H}
               x2={t.x}
               y2={HEADER_H + chartH}
-              stroke="#e5e7eb"
+              stroke={gridStroke}
               strokeWidth={1}
             />
           ))}
           {ticks.map((t, i) => (
-            <SvgText key={`t${i}`} x={t.x + 3} y={HEADER_H - 10} fontSize={10} fill="#6b7280">
+            <SvgText key={`t${i}`} x={t.x + 3} y={HEADER_H - 10} fontSize={10} fill={tickFill}>
               {t.label}
             </SvgText>
           ))}
@@ -145,7 +142,7 @@ export function GanttChart({
               y1={HEADER_H}
               x2={todayX}
               y2={HEADER_H + chartH}
-              stroke="#dc2626"
+              stroke={DANGER}
               strokeWidth={1.5}
               strokeDasharray="4 3"
             />

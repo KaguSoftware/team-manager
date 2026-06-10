@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { DateField } from "@/components/DateField";
 import { Button, Field } from "@/components/ui";
+import { tap } from "@/lib/haptics";
 import type { Task, TaskPriority, TaskStatus } from "@/lib/database.types";
 import type { MemberWithProfile } from "@/lib/queries";
 import { taskSchema } from "@/lib/validation";
@@ -30,12 +31,12 @@ function Chip({
     <Pressable
       onPress={onPress}
       className={`mb-2 mr-2 rounded-full px-3 py-1.5 ${
-        active ? "bg-brand-600" : "bg-gray-200 dark:bg-gray-700"
+        active ? "bg-ink-950 dark:bg-ink-100" : "bg-gray-200 dark:bg-gray-700"
       }`}
     >
       <Text
         className={`text-sm font-medium capitalize ${
-          active ? "text-white" : "text-gray-700 dark:text-gray-200"
+          active ? "text-white dark:text-ink-950" : "text-gray-700 dark:text-gray-200"
         }`}
         numberOfLines={1}
       >
@@ -113,7 +114,15 @@ export function TaskForm({
       <Text className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Status</Text>
       <View className="flex-row flex-wrap">
         {(["todo", "in_progress", "review", "done"] as TaskStatus[]).map((s) => (
-          <Chip key={s} label={s.replace("_", " ")} active={status === s} onPress={() => setStatus(s)} />
+          <Chip
+            key={s}
+            label={s.replace("_", " ")}
+            active={status === s}
+            onPress={() => {
+              tap();
+              setStatus(s);
+            }}
+          />
         ))}
       </View>
 
@@ -122,7 +131,15 @@ export function TaskForm({
       </Text>
       <View className="flex-row flex-wrap">
         {(["low", "medium", "high", "urgent"] as TaskPriority[]).map((p) => (
-          <Chip key={p} label={p} active={priority === p} onPress={() => setPriority(p)} />
+          <Chip
+            key={p}
+            label={p}
+            active={priority === p}
+            onPress={() => {
+              tap();
+              setPriority(p);
+            }}
+          />
         ))}
       </View>
 

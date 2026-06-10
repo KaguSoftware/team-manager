@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TaskForm, type TaskFormValues } from "@/components/TaskForm";
+import { toast } from "@/components/Toast";
 import { Loading, Screen } from "@/components/ui";
 import { useMembers, useTasks } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
@@ -37,6 +38,7 @@ export default function NewTask() {
     }
     qc.invalidateQueries({ queryKey: ["tasks", projectId] });
     qc.invalidateQueries({ queryKey: ["my-tasks"] });
+    toast.success("Task created");
     router.back();
   };
 

@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Alert, FlatList, Pressable, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SkeletonList } from "@/components/Skeleton";
 import {
   Avatar,
   Badge,
   Button,
   Card,
   Field,
-  Loading,
   Screen,
   Subtle,
   Title,
@@ -35,7 +35,7 @@ export default function Team() {
   const workspaceId = useWorkspaceStore((s) => s.workspaceId);
   const userId = useUserId();
   const { data: role } = useMyRole(workspaceId);
-  const { data: members, isLoading } = useMembers(workspaceId);
+  const { data: members, isLoading, refetch, isRefetching } = useMembers(workspaceId);
   const isAdmin = role === "owner" || role === "admin";
   const { data: invites } = usePendingInvites(workspaceId, isAdmin);
   const { createInvite, changeRole, removeMember } = useWorkspaceMutations(workspaceId);
@@ -96,7 +96,20 @@ export default function Team() {
     Alert.alert(name, `Role: ${m.role}`, options);
   };
 
-  if (isLoading) return <Loading />;
+  if (isLoading) {
+    return (
+      <Screen>
+        <SafeAreaView className="flex-1" edges={["top"]}>
+          <View className="px-4 pt-2">
+            <Title>Team</Title>
+            <View className="mt-4">
+              <SkeletonList count={5} />
+            </View>
+          </View>
+        </SafeAreaView>
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -105,6 +118,7 @@ export default function Team() {
           data={members ?? []}
           keyExtractor={(m) => m.user_id}
           contentContainerClassName="px-4 pb-8"
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
           ListHeaderComponent={
             <View className="mb-4 mt-2">
               <Title>Team</Title>
@@ -149,12 +163,14 @@ export default function Team() {
                         key={r}
                         onPress={() => setInviteRole(r)}
                         className={`rounded-full px-3 py-1.5 ${
-                          inviteRole === r ? "bg-brand-600" : "bg-gray-200 dark:bg-gray-700"
+                          inviteRole === r
+                            ? "bg-ink-950 active:bg-ink-800 dark:bg-ink-100 dark:active:bg-ink-300"
+                            : "bg-gray-200 dark:bg-gray-700"
                         }`}
                       >
                         <Text
                           className={`text-sm font-medium capitalize ${
-                            inviteRole === r ? "text-white" : "text-gray-700 dark:text-gray-200"
+                            inviteRole === r ? "text-white dark:text-ink-950" : "text-gray-700 dark:text-gray-200"
                           }`}
                         >
                           {r}
