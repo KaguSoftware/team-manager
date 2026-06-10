@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { Alert, View } from "react-native";
 import { z } from "zod";
 import { Button, Field, Screen, Subtle, Title } from "@/components/ui";
+import { AUTH_REDIRECT_URL } from "@/lib/authLinks";
 import { supabase } from "@/lib/supabase";
 import { emailSchema } from "@/lib/validation";
 
@@ -20,7 +21,9 @@ export default function ForgotPassword() {
 
   const onSubmit = handleSubmit(async ({ email }) => {
     setBusy(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: AUTH_REDIRECT_URL,
+    });
     setBusy(false);
     if (error) {
       Alert.alert("Could not send reset email", error.message);

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { z } from "zod";
+import { SocialAuth } from "@/components/SocialAuth";
 import { Button, Field, Screen, Subtle, Title } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 import { signInSchema } from "@/lib/validation";
@@ -71,6 +72,8 @@ export default function SignIn() {
           />
 
           <Button title="Sign in" onPress={onSubmit} loading={busy} className="mt-2" />
+
+          <SocialAuth />
 
           <View className="mt-6 flex-row justify-center gap-1">
             <Text className="text-gray-500 dark:text-gray-400">New here?</Text>

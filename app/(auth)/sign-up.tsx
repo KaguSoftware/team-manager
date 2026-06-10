@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { z } from "zod";
+import { SocialAuth } from "@/components/SocialAuth";
 import { Button, Field, Screen, Subtle, Title } from "@/components/ui";
+import { AUTH_REDIRECT_URL } from "@/lib/authLinks";
 import { supabase } from "@/lib/supabase";
 import { signUpSchema } from "@/lib/validation";
 
@@ -22,7 +24,7 @@ export default function SignUp() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName }, emailRedirectTo: AUTH_REDIRECT_URL },
     });
     setBusy(false);
     if (error) {
@@ -111,6 +113,8 @@ export default function SignUp() {
           />
 
           <Button title="Create account" onPress={onSubmit} loading={busy} className="mt-2" />
+
+          <SocialAuth />
 
           <View className="mt-6 flex-row justify-center gap-1">
             <Text className="text-gray-500 dark:text-gray-400">Already have an account?</Text>

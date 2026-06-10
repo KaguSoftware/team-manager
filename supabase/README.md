@@ -39,6 +39,47 @@ are no RLS warnings.
   Settings.
 - (Optional) tighten rate limits under Authentication → Rate Limits.
 
+## 4b. URL configuration (fixes the "localhost:3000" page after email links)
+
+Dashboard → **Authentication → URL Configuration**:
+
+- **Site URL**: `kaguteam://auth/callback`
+- **Redirect URLs**: add `kaguteam://*`
+
+The app sends `emailRedirectTo` / `redirectTo: kaguteam://auth/callback` on
+sign-up and password-reset emails. In production/dev-client builds, tapping
+the email link bounces straight back into the app (and password-recovery
+links open the in-app "choose a new password" screen). In **Expo Go** the
+custom scheme isn't registered, so the link can't reopen the app — but the
+verification has already happened server-side by the time the browser opens;
+just return to the app and sign in.
+
+## 4c. Social login providers (Google + Apple)
+
+Dashboard → **Authentication → Sign In / Providers**:
+
+**Apple** (native flow via `signInWithIdToken`):
+1. Enable the Apple provider.
+2. In **Client IDs**, add the app bundle ID: `com.kagu.team`.
+3. No secret needed for the native iOS flow. (Requires the Sign in with
+   Apple capability on the App ID — EAS sets this up from
+   `ios.usesAppleSignIn` in app.json.)
+4. Note: the Apple button only renders on iOS devices; it does not work in
+   Expo Go on Android (by design).
+
+**Google** (browser OAuth flow):
+1. In Google Cloud Console → APIs & Services → Credentials, create an
+   **OAuth client ID** of type **Web application**.
+   - Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
+2. Enable the Google provider in Supabase and paste the **Client ID** and
+   **Client secret**.
+3. The app opens the Google consent page in a secure in-app browser and
+   returns via `kaguteam://auth/callback` (already allowlisted in 4b) — so
+   Google sign-in only completes in production/dev-client builds, not Expo Go.
+
+App Store note: because the app offers Google sign-in, Apple **requires**
+Sign in with Apple to also be offered (guideline 4.8) — both ship together.
+
 ## 5. App configuration
 
 Copy `.env.example` (repo root) to `.env` and fill in from

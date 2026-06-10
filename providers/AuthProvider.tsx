@@ -1,5 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
+import { router } from "expo-router";
 import { createContext, useContext, useEffect, useState } from "react";
+import { subscribeToAuthLinks } from "@/lib/authLinks";
 import { supabase } from "@/lib/supabase";
 
 type AuthState = {
@@ -19,7 +21,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setState({ session, loading: false });
     });
-    return () => sub.subscription.unsubscribe();
+    // auth deep links from confirmation / password-recovery emails
+    const unsubscribeLinks = subscribeToAuthLinks((type) => {
+      if (type === "recovery") router.push("/reset-password");
+    });
+    return () => {
+      sub.subscription.unsubscribe();
+      unsubscribeLinks();
+    };
   }, []);
 
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
