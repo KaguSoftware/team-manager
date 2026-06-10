@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { DateField } from "@/components/DateField";
 import { Button, Field } from "@/components/ui";
 import type { Task, TaskPriority, TaskStatus } from "@/lib/database.types";
 import type { MemberWithProfile } from "@/lib/queries";
@@ -7,8 +16,6 @@ import { taskSchema } from "@/lib/validation";
 import { z } from "zod";
 
 export type TaskFormValues = z.infer<typeof taskSchema>;
-
-const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 
 function Chip({
   label,
@@ -58,28 +65,19 @@ export function TaskForm({
   const [status, setStatus] = useState<TaskStatus>(initial?.status ?? "todo");
   const [priority, setPriority] = useState<TaskPriority>(initial?.priority ?? "medium");
   const [assignee, setAssignee] = useState<string | null>(initial?.assignee_id ?? null);
-  const [startDate, setStartDate] = useState(initial?.start_date ?? "");
-  const [dueDate, setDueDate] = useState(initial?.due_date ?? "");
+  const [startDate, setStartDate] = useState<string | null>(initial?.start_date ?? null);
+  const [dueDate, setDueDate] = useState<string | null>(initial?.due_date ?? null);
   const [dependsOn, setDependsOn] = useState<string | null>(initial?.depends_on ?? null);
 
   const submit = () => {
-    for (const [label, v] of [
-      ["Start date", startDate],
-      ["Due date", dueDate],
-    ] as const) {
-      if (v && !dateRe.test(v)) {
-        Alert.alert("Invalid date", `${label} must look like 2026-06-15`);
-        return;
-      }
-    }
     const parsed = taskSchema.safeParse({
       title,
       description,
       status,
       priority,
       assignee_id: assignee,
-      start_date: startDate || null,
-      due_date: dueDate || null,
+      start_date: startDate,
+      due_date: dueDate,
       depends_on: dependsOn,
     });
     if (!parsed.success) {
@@ -97,6 +95,10 @@ export function TaskForm({
   const assignable = members.filter((m) => m.role !== "client");
 
   return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      className="flex-1"
+    >
     <ScrollView contentContainerClassName="px-4 pb-12" keyboardShouldPersistTaps="handled">
       <Field label="Title" value={title} onChangeText={setTitle} maxLength={200} />
       <Field
@@ -140,24 +142,8 @@ export function TaskForm({
       </View>
 
       <View className="mt-2 flex-row gap-3">
-        <View className="flex-1">
-          <Field
-            label="Start (YYYY-MM-DD)"
-            value={startDate}
-            onChangeText={setStartDate}
-            placeholder="2026-06-15"
-            autoCapitalize="none"
-          />
-        </View>
-        <View className="flex-1">
-          <Field
-            label="Due (YYYY-MM-DD)"
-            value={dueDate}
-            onChangeText={setDueDate}
-            placeholder="2026-06-22"
-            autoCapitalize="none"
-          />
-        </View>
+        <DateField label="Start" value={startDate} onChange={setStartDate} />
+        <DateField label="Due" value={dueDate} onChange={setDueDate} />
       </View>
 
       {dependencyOptions.length > 0 ? (
@@ -183,5 +169,6 @@ export function TaskForm({
 
       <Button title={submitLabel} onPress={submit} loading={busy} className="mt-4" />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

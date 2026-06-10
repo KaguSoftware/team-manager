@@ -2,8 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { DateTimeField } from "@/components/DateField";
 import { Button, Field, Screen } from "@/components/ui";
 import { useMembers } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
@@ -11,11 +20,11 @@ import { meetingSchema } from "@/lib/validation";
 import { useUserId } from "@/providers/AuthProvider";
 import { useWorkspaceStore } from "@/stores/workspace";
 
-const dtRe = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
-
-function toIso(local: string) {
-  // "YYYY-MM-DD HH:mm" in the device's timezone
-  return new Date(local.replace(" ", "T")).toISOString();
+function nextFullHour() {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return d;
 }
 
 export default function NewMeeting() {
@@ -27,25 +36,32 @@ export default function NewMeeting() {
   const [title, setTitle] = useState("");
   const [agenda, setAgenda] = useState("");
   const [location, setLocation] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  const [start, setStart] = useState<Date>(nextFullHour);
+  const [end, setEnd] = useState<Date>(() => {
+    const d = nextFullHour();
+    d.setHours(d.getHours() + 1);
+    return d;
+  });
   const [attendees, setAttendees] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  // moving the start drags the end along, keeping the meeting length
+  const onStartChange = (d: Date) => {
+    const duration = end.getTime() - start.getTime();
+    setStart(d);
+    setEnd(new Date(d.getTime() + Math.max(duration, 15 * 60_000)));
+  };
 
   const toggleAttendee = (id: string) =>
     setAttendees((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   const onCreate = async () => {
-    if (!dtRe.test(start) || !dtRe.test(end)) {
-      Alert.alert("Invalid time", "Times must look like 2026-06-15 14:30");
-      return;
-    }
     const parsed = meetingSchema.safeParse({
       title,
       agenda,
       location,
-      starts_at: toIso(start),
-      ends_at: toIso(end),
+      starts_at: start.toISOString(),
+      ends_at: end.toISOString(),
     });
     if (!parsed.success) {
       Alert.alert("Check the form", parsed.error.issues[0].message);
@@ -82,77 +98,68 @@ export default function NewMeeting() {
   return (
     <Screen>
       <SafeAreaView className="flex-1" edges={["top"]}>
-        <View className="flex-row items-center gap-3 px-4 py-2">
-          <Pressable accessibilityLabel="Back" onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={26} color="#6b7280" />
-          </Pressable>
-          <Text className="text-lg font-bold text-gray-900 dark:text-gray-50">New meeting</Text>
-        </View>
-        <ScrollView contentContainerClassName="px-4 pb-12" keyboardShouldPersistTaps="handled">
-          <Field label="Title" value={title} onChangeText={setTitle} maxLength={200} />
-          <Field
-            label="Agenda"
-            value={agenda}
-            onChangeText={setAgenda}
-            multiline
-            style={{ minHeight: 70, textAlignVertical: "top" }}
-          />
-          <Field
-            label="Location / video link"
-            value={location}
-            onChangeText={setLocation}
-            autoCapitalize="none"
-            placeholder="Office or https://meet…"
-          />
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <Field
-                label="Starts (YYYY-MM-DD HH:mm)"
-                value={start}
-                onChangeText={setStart}
-                placeholder="2026-06-15 14:00"
-                autoCapitalize="none"
-              />
-            </View>
-            <View className="flex-1">
-              <Field
-                label="Ends"
-                value={end}
-                onChangeText={setEnd}
-                placeholder="2026-06-15 15:00"
-                autoCapitalize="none"
-              />
-            </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          className="flex-1"
+        >
+          <View className="flex-row items-center gap-3 px-4 py-2">
+            <Pressable accessibilityLabel="Back" onPress={() => router.back()}>
+              <Ionicons name="chevron-back" size={26} color="#6b7280" />
+            </Pressable>
+            <Text className="text-lg font-bold text-gray-900 dark:text-gray-50">New meeting</Text>
           </View>
+          <ScrollView contentContainerClassName="px-4 pb-12" keyboardShouldPersistTaps="handled">
+            <Field label="Title" value={title} onChangeText={setTitle} maxLength={200} />
 
-          <Text className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Attendees (you are included automatically)
-          </Text>
-          <View className="mb-2 flex-row flex-wrap">
-            {invitable.map((m) => {
-              const active = attendees.includes(m.user_id);
-              return (
-                <Pressable
-                  key={m.user_id}
-                  onPress={() => toggleAttendee(m.user_id)}
-                  className={`mb-2 mr-2 rounded-full px-3 py-1.5 ${
-                    active ? "bg-brand-600" : "bg-gray-200 dark:bg-gray-700"
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      active ? "text-white" : "text-gray-700 dark:text-gray-200"
+            <View className="flex-row gap-3">
+              <DateTimeField label="Starts" value={start} onChange={onStartChange} />
+              <DateTimeField label="Ends" value={end} onChange={setEnd} />
+            </View>
+
+            <Field
+              label="Location / video link"
+              value={location}
+              onChangeText={setLocation}
+              autoCapitalize="none"
+              placeholder="Office or https://meet…"
+            />
+            <Field
+              label="Agenda (optional)"
+              value={agenda}
+              onChangeText={setAgenda}
+              multiline
+              placeholder="What's this meeting about?"
+            />
+
+            <Text className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+              Attendees (you are included automatically)
+            </Text>
+            <View className="mb-2 flex-row flex-wrap">
+              {invitable.map((m) => {
+                const active = attendees.includes(m.user_id);
+                return (
+                  <Pressable
+                    key={m.user_id}
+                    onPress={() => toggleAttendee(m.user_id)}
+                    className={`mb-2 mr-2 rounded-full px-3 py-1.5 ${
+                      active ? "bg-brand-600" : "bg-gray-200 dark:bg-gray-700"
                     }`}
                   >
-                    {m.profiles?.full_name || "Unnamed"}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                    <Text
+                      className={`text-sm font-medium ${
+                        active ? "text-white" : "text-gray-700 dark:text-gray-200"
+                      }`}
+                    >
+                      {m.profiles?.full_name || "Unnamed"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
-          <Button title="Schedule meeting" onPress={onCreate} loading={busy} className="mt-2" />
-        </ScrollView>
+            <Button title="Schedule meeting" onPress={onCreate} loading={busy} className="mt-2" />
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </Screen>
   );

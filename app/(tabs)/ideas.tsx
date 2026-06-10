@@ -2,7 +2,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "expo-router";
 import { useMemo, useState } from "react";
-import { Alert, FlatList, Modal, Pressable, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Badge,
@@ -151,7 +160,10 @@ export default function Ideas() {
         />
 
         <Modal visible={creating} animationType="slide" transparent>
-          <View className="flex-1 justify-end bg-black/40">
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            className="flex-1 justify-end bg-black/40"
+          >
             <View className="rounded-t-3xl bg-surface-light p-6 pb-10 dark:bg-surface-dark">
               <Text className="mb-3 text-lg font-bold text-gray-900 dark:text-gray-100">
                 Pitch an idea
@@ -168,7 +180,7 @@ export default function Ideas() {
               <Button title="Post idea" onPress={onCreate} loading={busy} />
               <Button title="Cancel" variant="ghost" onPress={() => setCreating(false)} />
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
       </SafeAreaView>
     </Screen>

@@ -88,16 +88,27 @@ export function Button({
 export function Field({
   label,
   error,
+  multiline,
+  style,
   ...props
 }: TextInputProps & { label: string; error?: string }) {
   return (
     <View className="mb-3">
       <Text className="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">{label}</Text>
       <TextInput
+        multiline={multiline}
         placeholderTextColor="#9ca3af"
-        className={`rounded-xl border bg-surface-light px-4 py-3 text-base text-gray-900 dark:bg-surface-dark dark:text-gray-100 ${
-          error ? "border-red-500" : "border-gray-200 dark:border-gray-700"
-        }`}
+        className={`rounded-xl border bg-surface-light px-4 text-base leading-5 text-gray-900 dark:bg-surface-dark dark:text-gray-100 ${
+          multiline ? "py-3" : "h-12"
+        } ${error ? "border-red-500" : "border-gray-200 dark:border-gray-700"}`}
+        // Android TextInputs ship extra default vertical padding that fights
+        // the fixed height; zero it and center the text instead.
+        style={[
+          multiline
+            ? { textAlignVertical: "top" as const, minHeight: 88 }
+            : { paddingVertical: 0, textAlignVertical: "center" as const },
+          style,
+        ]}
         {...props}
       />
       {error ? <Text className="mt-1 text-xs text-red-500">{error}</Text> : null}
