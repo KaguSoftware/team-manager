@@ -2,15 +2,26 @@ import "../global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
-import { Platform } from "react-native";
+import { useEffect, useState } from "react";
+import { Appearance, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "@/components/Toast";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { useThemeStore } from "@/stores/theme";
 
 export const unstable_settings = { anchor: "(tabs)" };
 
+// Apply the saved appearance preference app-wide. "system" clears the override
+// so the OS scheme is followed again.
+function useAppearancePreference() {
+  const pref = useThemeStore((s) => s.pref);
+  useEffect(() => {
+    Appearance.setColorScheme(pref === "system" ? null : pref);
+  }, [pref]);
+}
+
 export default function RootLayout() {
+  useAppearancePreference();
   const [queryClient] = useState(
     () =>
       new QueryClient({

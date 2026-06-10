@@ -104,10 +104,20 @@ export default function Home() {
 
           <View className="mb-2 flex-row flex-wrap gap-3">
             <View style={{ flexBasis: "48%", flexGrow: 1 }}>
-              <StatCard label="Open tasks" value={stats.open} icon="list-outline" />
+              <StatCard
+                label="Open tasks"
+                value={stats.open}
+                icon="list-outline"
+                onPress={() => router.push("/insights")}
+              />
             </View>
             <View style={{ flexBasis: "48%", flexGrow: 1 }}>
-              <StatCard label="Due this week" value={stats.dueThisWeek} icon="calendar-outline" />
+              <StatCard
+                label="Due this week"
+                value={stats.dueThisWeek}
+                icon="calendar-outline"
+                onPress={() => router.push("/insights")}
+              />
             </View>
             <View style={{ flexBasis: "48%", flexGrow: 1 }}>
               <StatCard
@@ -115,6 +125,7 @@ export default function Home() {
                 value={stats.overdue}
                 icon="alert-circle-outline"
                 tone={stats.overdue > 0 ? "danger" : "default"}
+                onPress={() => router.push("/insights")}
               />
             </View>
             <View style={{ flexBasis: "48%", flexGrow: 1 }}>
@@ -122,6 +133,7 @@ export default function Home() {
                 label="Meetings today"
                 value={stats.meetingsToday}
                 icon="videocam-outline"
+                onPress={() => router.push("/(tabs)/meetings")}
               />
             </View>
           </View>

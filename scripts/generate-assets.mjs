@@ -60,9 +60,10 @@ async function main() {
   await write("icon.png", await sharp(SRC).resize(1024, 1024).flatten({ background: BLACK }).png().toBuffer());
   await write("favicon.png", await sharp(SRC).resize(48, 48).flatten({ background: BLACK }).png().toBuffer());
 
-  // Splash (light + dark both use a black field — see app.json): bird cut out
-  // onto transparent so it composites cleanly over the black splash color.
-  const splash = await centerOnTransparent(await birdCutout(820), 1024);
+  // Splash (light + dark both use a black field — see app.json): the full
+  // "Kagu logo enhanced" artwork flattened on its black field, so the launch
+  // screen shows the real logo lockup rather than a bare cut-out.
+  const splash = await sharp(SRC).resize(1024, 1024).flatten({ background: BLACK }).png().toBuffer();
   await write("splash-icon.png", splash);
   await write("splash-icon-dark.png", splash);
 

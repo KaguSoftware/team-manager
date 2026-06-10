@@ -2,15 +2,24 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, useColorScheme, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { toast } from "@/components/Toast";
 import { Button, Card, Field, Screen, Subtle } from "@/components/ui";
+import { tap } from "@/lib/haptics";
+import { accentFg, ICON_MUTED } from "@/lib/theme";
 import { clearPushToken, registerForPushNotifications } from "@/lib/push";
 import { useMembers, useMyWorkspaces, useProfile, useWorkspaceMutations } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import { useUserId } from "@/providers/AuthProvider";
+import { useThemeStore, type ThemePref } from "@/stores/theme";
 import { useWorkspaceStore } from "@/stores/workspace";
+
+const THEME_OPTIONS: { value: ThemePref; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: "system", label: "System", icon: "phone-portrait-outline" },
+  { value: "light", label: "Light", icon: "sunny-outline" },
+  { value: "dark", label: "Dark", icon: "moon-outline" },
+];
 
 export default function Settings() {
   const userId = useUserId();
@@ -21,6 +30,9 @@ export default function Settings() {
   const profileQ = useProfile(userId);
   const currentWorkspace = (workspaces ?? []).find((ws) => ws.id === workspaceId);
   const { data: members } = useMembers(workspaceId);
+  const themePref = useThemeStore((s) => s.pref);
+  const setThemePref = useThemeStore((s) => s.setPref);
+  const scheme = useColorScheme();
   const [name, setName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [mfaEnrolled, setMfaEnrolled] = useState<boolean | null>(null);
@@ -160,6 +172,44 @@ export default function Settings() {
             <Text className="mb-2 font-semibold text-gray-900 dark:text-gray-100">Profile</Text>
             <Field label="Full name" value={name} onChangeText={setName} maxLength={120} />
             <Button title="Save" onPress={saveName} loading={savingName} />
+          </Card>
+
+          <Card className="mb-3">
+            <Text className="mb-2 font-semibold text-gray-900 dark:text-gray-100">Appearance</Text>
+            <View className="flex-row gap-2 rounded-xl bg-gray-200 p-1 dark:bg-gray-800">
+              {THEME_OPTIONS.map((opt) => {
+                const active = themePref === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    onPress={() => {
+                      tap();
+                      setThemePref(opt.value);
+                    }}
+                    className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-lg py-2 ${
+                      active ? "bg-ink-950 dark:bg-ink-100" : ""
+                    }`}
+                  >
+                    <Ionicons
+                      name={opt.icon}
+                      size={16}
+                      color={active ? accentFg(scheme) : ICON_MUTED}
+                    />
+                    <Text
+                      className={`text-sm font-medium ${
+                        active
+                          ? "text-white dark:text-ink-950"
+                          : "text-gray-700 dark:text-gray-200"
+                      }`}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </Card>
 
           <Card className="mb-3">

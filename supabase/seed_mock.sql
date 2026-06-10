@@ -10,7 +10,7 @@
 
 do $$
 declare
-  v_email   text := 'parsaxavier@gmail.com';   -- <<< CHANGE ME to your login email
+  v_email   text := 'testuser@gmail.com';   -- <<< CHANGE ME to your login email
   v_me      uuid;
   v_ws      uuid;
   v_alice   uuid;
