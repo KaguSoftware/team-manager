@@ -82,6 +82,9 @@ export default function Home() {
               </View>
             </View>
             <View className="flex-row gap-4">
+              <Pressable accessibilityLabel="Search" onPress={() => router.push("/search")}>
+                <Ionicons name="search-outline" size={26} color="#6b7280" />
+              </Pressable>
               <Pressable accessibilityLabel="Insights" onPress={() => router.push("/insights")}>
                 <Ionicons name="stats-chart-outline" size={26} color="#6b7280" />
               </Pressable>
