@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, router, Stack, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   Alert,
@@ -357,14 +357,15 @@ export default function ProjectDetail() {
 
         {canWrite ? (
           <View className="absolute bottom-6 right-6">
-            <Link href={{ pathname: "/task/new", params: { projectId: project.id } }} asChild>
-              <AnimatedPressable
-                accessibilityLabel="New task"
-                className="h-14 w-14 items-center justify-center rounded-full bg-ink-950 shadow-lg active:bg-ink-800 dark:bg-ink-100 dark:active:bg-ink-300"
-              >
-                <Ionicons name="add" size={30} color={accentFg(scheme)} />
-              </AnimatedPressable>
-            </Link>
+            <AnimatedPressable
+              accessibilityLabel="New task"
+              onPress={() =>
+                router.push({ pathname: "/task/new", params: { projectId: project.id } })
+              }
+              className="h-14 w-14 items-center justify-center rounded-full bg-ink-950 shadow-lg active:bg-ink-800 dark:bg-ink-100 dark:active:bg-ink-300"
+            >
+              <Ionicons name="add" size={30} color={accentFg(scheme)} />
+            </AnimatedPressable>
           </View>
         ) : null}
 
