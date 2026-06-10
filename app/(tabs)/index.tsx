@@ -1,98 +1,143 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { Link, router } from "expo-router";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Badge, Card, EmptyState, Screen, Subtle, Title } from "@/components/ui";
+import {
+  statusTone,
+  useMeetings,
+  useMyTasks,
+  useMyWorkspaces,
+  useNotifications,
+} from "@/lib/queries";
+import { useUserId } from "@/providers/AuthProvider";
+import { useWorkspaceStore } from "@/stores/workspace";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function Home() {
+  const workspaceId = useWorkspaceStore((s) => s.workspaceId);
+  const userId = useUserId();
+  const { data: workspaces } = useMyWorkspaces();
+  const tasksQ = useMyTasks(workspaceId, userId);
+  const meetingsQ = useMeetings(workspaceId);
+  const { data: notifications } = useNotifications();
 
-export default function HomeScreen() {
+  const workspace = workspaces?.find((w) => w.id === workspaceId);
+  const unread = notifications?.filter((n) => !n.read_at).length ?? 0;
+
+  const now = new Date();
+  const endOfDay = new Date(now);
+  endOfDay.setHours(23, 59, 59);
+  const todaysMeetings = (meetingsQ.data ?? []).filter(
+    (m) => new Date(m.ends_at) >= now && new Date(m.starts_at) <= endOfDay,
+  );
+
+  const refreshing = tasksQ.isRefetching || meetingsQ.isRefetching;
+  const onRefresh = () => {
+    tasksQ.refetch();
+    meetingsQ.refetch();
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <Screen>
+      <SafeAreaView className="flex-1" edges={["top"]}>
+        <ScrollView
+          contentContainerClassName="px-4 pb-8"
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          <View className="mb-4 mt-2 flex-row items-center justify-between">
+            <View>
+              <Subtle>{workspace?.name ?? "Workspace"}</Subtle>
+              <Title>Today</Title>
+            </View>
+            <View className="flex-row gap-4">
+              <Pressable
+                accessibilityLabel="Notifications"
+                onPress={() => router.push("/notifications")}
+              >
+                <Ionicons name="notifications-outline" size={26} color="#6b7280" />
+                {unread > 0 ? (
+                  <View className="absolute -right-1 -top-1 h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1">
+                    <Text className="text-[10px] font-bold text-white">{unread}</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+              <Pressable accessibilityLabel="Settings" onPress={() => router.push("/settings")}>
+                <Ionicons name="settings-outline" size={26} color="#6b7280" />
+              </Pressable>
+            </View>
+          </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+          <Text className="mb-2 mt-2 text-base font-semibold text-gray-700 dark:text-gray-200">
+            Today&apos;s meetings
+          </Text>
+          {todaysMeetings.length === 0 ? (
+            <Card>
+              <Subtle>No meetings today 🎉</Subtle>
+            </Card>
+          ) : (
+            todaysMeetings.map((m) => (
+              <Link key={m.id} href={{ pathname: "/meeting/[id]", params: { id: m.id } }} asChild>
+                <Pressable>
+                  <Card className="mb-2">
+                    <Text className="font-semibold text-gray-900 dark:text-gray-100">
+                      {m.title}
+                    </Text>
+                    <Subtle>
+                      {new Date(m.starts_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {" – "}
+                      {new Date(m.ends_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {m.location ? ` · ${m.location}` : ""}
+                    </Subtle>
+                  </Card>
+                </Pressable>
+              </Link>
+            ))
+          )}
+
+          <Text className="mb-2 mt-6 text-base font-semibold text-gray-700 dark:text-gray-200">
+            My open tasks
+          </Text>
+          {(tasksQ.data ?? []).length === 0 ? (
+            <EmptyState
+              icon="checkmark-done-circle-outline"
+              title="Nothing assigned"
+              subtitle="Tasks assigned to you will show up here"
+            />
+          ) : (
+            (tasksQ.data ?? []).map((t) => (
+              <Link
+                key={t.id}
+                href={{ pathname: "/task/[id]", params: { id: t.id } }}
+                asChild
+              >
+                <Pressable>
+                  <Card className="mb-2">
+                    <View className="flex-row items-center justify-between">
+                      <Text
+                        className="flex-1 pr-2 font-semibold text-gray-900 dark:text-gray-100"
+                        numberOfLines={1}
+                      >
+                        {t.title}
+                      </Text>
+                      <Badge text={t.status.replace("_", " ")} tone={statusTone[t.status]} />
+                    </View>
+                    <Subtle>
+                      {(t as { projects?: { name: string } | null }).projects?.name ?? ""}
+                      {t.due_date ? ` · due ${t.due_date}` : ""}
+                    </Subtle>
+                  </Card>
+                </Pressable>
+              </Link>
+            ))
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
